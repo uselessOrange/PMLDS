@@ -53,6 +53,8 @@ def dataPipeline(df):
 
     return dataJourney
 
+dataJourney = dataPipeline(df)
+
 
 
 

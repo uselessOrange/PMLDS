@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 # Define the number of permutations and iterations
 permutations = 3
 num_iterations = 10
+
 rmse_matrix=np.zeros([3,num_iterations,permutations])
 
 
@@ -90,4 +91,22 @@ for i, permutation_losses in enumerate(losses_per_permutation):
     axes[i].legend()
 
 plt.tight_layout()  # Adjust subplot parameters to fit into the figure
+plt.show()
+
+
+# Create subplots for each set (training, testing, validation)
+fig, axs = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
+
+# Plot boxplots for each set (training, testing, validation)
+for i, set_name in enumerate(['Training', 'Testing', 'Validation']):
+    # Data for the current set
+    data = rmse_matrix[i]
+    
+    # Plot boxplot for each permutation
+    axs[i].boxplot(data.T)
+    axs[i].set_title(f'{set_name} Set')
+    axs[i].set_xlabel('Permutation')
+    axs[i].set_ylabel('RMSE Value')
+
+plt.tight_layout()
 plt.show()
