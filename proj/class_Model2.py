@@ -1,3 +1,8 @@
+from sklearn.model_selection import train_test_split
+
+from GetData import getData
+
+
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras import Input
@@ -15,7 +20,7 @@ class Model:
         self.RMSE={}
         self.config=[]
 
-
+        self.num_iterations=10
 
     def get_RMSE(self,X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test):
         y_predict_train = self.model.predict(X1_train1)
@@ -51,9 +56,6 @@ class Model:
           )
         return early_stopping_callback
 
-
-
-
     def train_Model(self,X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test):
 
 
@@ -70,10 +72,35 @@ class Model:
     
     #def load_history(self):
 
-
     def load_Model(self,name):
         self.model=tf.keras.models.load_model(name)
 
+    def Model_Across_Iterations(self,X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test):
+        num_iterations = self.num_iterations
+        modelList=[]
+        loss = []
+        val_loss = []
+        for iteration in range(num_iterations):
+            self.train_Model(X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test)
+            loss.append(self.history['loss'])
+            val_loss.append(self.history['val_loss'])
+            self.save_Model(f'model_{iteration}.h5')
+            modelList.append(self)
+        return modelList, loss, val_loss
+
+    def Model_Across_Permutations(self,X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test):
+        modelList = []
+        loss = []
+        val_loss = []
+
+        configs=[[2,1],[2,2,1]]
+        for config in configs:
+            self.config = config
+            modelList_per_iteration, loss_per_iteration, val_loss_per_iteration = self.Model_Across_Iterations(X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test)
+            modelList.append(modelList_per_iteration)
+            loss.append(loss_per_iteration)
+            val_loss.append(val_loss_per_iteration)
+        return modelList, loss, val_loss
 """
 dataFrame = getData()
 
@@ -102,19 +129,7 @@ print(model2.RMSE['test'])
 """
 
 
-def Model_Across_Iterations(num_iterations,config,X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test):
-    modelList=[]
-    loss = []
-    val_loss = []
-    for iteration in range(num_iterations):
-        model=Model()
-        model.config=config
-        model.train_Model(X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test)
-        loss.append(model.history['loss'])
-        val_loss.append(model.history['val_loss'])
-        model.save_Model(f'model_{iteration}.h5')
-        modelList.append(model)
-    return modelList, loss, val_loss
+
 
 """
 dataFrame = getData()
@@ -129,7 +144,9 @@ config = [2,2,1]
 
 num_iterations = 2
 
-modelList, loss, val_loss = Model_Across_Iterations(num_iterations,config,X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test)
+model_iteration_set = Model()
+model_iteration_set.config = config
+modelList, loss, val_loss = model_iteration_set.Model_Across_Iterations(num_iterations,X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test)
 
 model = modelList[0]
 
