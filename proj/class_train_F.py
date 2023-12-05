@@ -1,70 +1,156 @@
+from sklearn.model_selection import train_test_split
+
+from GetData import getData
+
+
+import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
+from tensorflow.keras import Input
+from tensorflow.keras.layers import Dense
 
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 
-class ModelEvaluator:
-    def __init__(self, permutations, num_iterations):
-        self.permutations = permutations
-        self.num_iterations = num_iterations
-        self.losses_per_permutation = []
-        self.val_losses_per_permutation = []
-        self.rmse_matrix = np.zeros([3, num_iterations, permutations])
+from GetData import getData
+
+class Model:
+    def __init__(self):
+        self.model = tf.keras.Sequential()
+        self.history={}
+        self.RMSE={}
+        self.config=[]
+        self.activationFinction = 'relu'
+        self.configs=[[2,1],[2,2,1]]
+        self.num_iterations=10
+
+    def get_RMSE(self,X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test):
+        y_predict_train = self.model.predict(X1_train1)
+        y_predict_val = self.model.predict(X1_validation)
+        y_predict_test = self.model.predict(X_test)
+
+        rmse_train=np.sqrt(mean_squared_error(y1_train1, y_predict_train))
+        rmse_val=np.sqrt(mean_squared_error(y1_validation, y_predict_val))
+        rmse_test=np.sqrt(mean_squared_error(y_test, y_predict_test))
+
+        self.RMSE={'train':rmse_train,'validation':rmse_val,'test':rmse_test}
+
+    def config_setup(self,num_of_features):
         
-        
-    def evaluate_models(self):
-        for permutation in range(self.permutations):
-            losses = []
-            val_losses = []
-            for j in range(self.num_iterations):
-                size = np.random.randint(5, 15)
-                loss = np.random.normal(1, 2, size=size)
-                losses.append(loss)
-                val_losses.append(-loss)
-                
-                self.rmse_matrix[0, j, permutation] = np.random.normal(1, 1000)
-                self.rmse_matrix[1, j, permutation] = np.random.normal(1, 1000)
-                self.rmse_matrix[2, j, permutation] = np.random.normal(1, 1000)
-            self.losses_per_permutation.append(losses)
-            self.val_losses_per_permutation.append(val_losses)
-    
-    def plot_data(self):
-        fig, axes = plt.subplots(len(self.losses_per_permutation), 1, figsize=(8, 6 * len(self.losses_per_permutation)))
 
-        # Plotting all iterations for each permutation as subplots
-        for i, permutation_losses in enumerate(self.losses_per_permutation):
-            count = 0
-            for loss in permutation_losses:
-                axes[i].plot(np.arange(len(loss)), loss, 'r', label=f'Iteration {count}')
-                axes[i].plot(np.arange(len(self.val_losses_per_permutation[i][count])), self.val_losses_per_permutation[i][count], 'b', label=f'Iteration {count}')
-                count += 1
+        #clearing the model to initiate new config
+        del self.model
+        self.model = tf.keras.Sequential()
 
-            axes[i].set_xlabel('Loss Index')
-            axes[i].set_ylabel('Loss Value')
-            axes[i].set_title(f'Permutation {i+1} - All Iterations')
-            axes[i].legend()
+        self.model.add(Input(shape=(num_of_features,)))
+        activationfunction = self.activationFinction
+     #   self.model.add(Input(shape=(self.config[0],)))
+     #   self.model.add(Dense(self.config[1],activation='relu',input_shape=(self.config[0],)))
+        for layer in range(len(self.config)):
+            self.model.add(Dense(self.config[layer], activation=activationfunction))
+        self.model.add(Dense(1))
+        # Compile the model
+        self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-        plt.tight_layout()  # Adjust subplot parameters to fit into the figure
-        plt.show()
+        early_stopping_callback = tf.keras.callbacks.EarlyStopping(
+          monitor='val_loss',  # Monitor validation loss
+          patience=5,  # Stop training if no improvement for 5 consecutive epochs
+          restore_best_weights=True  # Restore model weights to the best observed during training
+          )
+        return early_stopping_callback
 
-    def plot_box(self):
-        #Create subplots for each set (training, testing, validation)
-        fig, axs = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
+    def train_Model(self,X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test):
 
-        # Plot boxplots for each set (training, testing, validation)
-        for i, set_name in enumerate(['Training', 'Testing', 'Validation']):
-            # Data for the current set
-            data = self.rmse_matrix[i]
-            
-            # Plot boxplot for each permutation
-            axs[i].boxplot(data.T)
-            axs[i].set_title(f'{set_name} Set')
-            axs[i].set_xlabel('Permutation')
-            axs[i].set_ylabel('RMSE Value')
+        num_of_features = len(X1_train1.columns)
 
-        plt.tight_layout()
-        plt.show()
-# Usage example:
-evaluator = ModelEvaluator(permutations=3, num_iterations=10)
-evaluator.evaluate_models()
-evaluator.plot_data()
-evaluator.plot_box()
+        early_stopping_callback = self.config_setup(num_of_features)
+        history = self.model.fit(X1_train1, y1_train1, epochs=50, validation_data=(X1_validation, y1_validation), callbacks=[early_stopping_callback])
+        self.history = {'loss': history.history['loss'],'val_loss':history.history['val_loss']}
+
+        self.get_RMSE(X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test)
+
+    def save_Model(self,name):
+        self.model.save(name)
+        #here insert code for saving history in a separate file. model.history is lost after saving model
+
+    #def load_history(self):
+
+    def load_Model(self,name):
+        self.model=tf.keras.models.load_model(name)
+
+    def Model_Across_Iterations(self,X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test):
+        num_iterations = self.num_iterations
+        modelList=[]
+        loss = []
+        val_loss = []
+        RMSE = []
+        for iteration in range(num_iterations):
+            self.train_Model(X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test)
+            loss.append(self.history['loss'])
+            val_loss.append(self.history['val_loss'])
+            #self.save_Model(f'model_{iteration}.h5')
+            modelList.append(self)
+            RMSE.append(self.RMSE)
+        return modelList, loss, val_loss, RMSE
+
+    def Model_Across_Permutations(self,X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test):
+        modelList = []
+        loss = []
+        val_loss = []
+        RMSE = []
+        configs = self.configs
+
+        for config in configs:
+            self.config = config
+            modelList_per_iteration, loss_per_iteration, val_loss_per_iteration, RMSE_per_iteration = self.Model_Across_Iterations(X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test)
+            modelList.append(modelList_per_iteration)
+            loss.append(loss_per_iteration)
+            val_loss.append(val_loss_per_iteration)
+            RMSE.append(RMSE_per_iteration)
+        return modelList, loss, val_loss, RMSE
+
+    def Model_Across_DataSets(self,datasets):
+      dataFrame = getData()
+
+      modelList = []
+      loss = []
+      val_loss = []
+      RMSE = []
+
+      for i in datasets:
+          X2=dataFrame['workableData']['FeatureDividedData'][f'X{i}']
+          y=dataFrame['workableData']['y']
+
+          X_train, X_test, y_train, y_test = train_test_split(X2, y, test_size = 0.2, random_state=42)
+          X1_train1, X1_validation, y1_train1, y1_validation = train_test_split(X_train, y_train, test_size = 0.3, random_state=42)
+
+
+
+          modelList_per_permutation, loss_per_permutation, val_loss_per_permutation, RMSE_per_permutation = self.Model_Across_Permutations(X1_train1, y1_train1,X1_validation, y1_validation,X_test,y_test)
+
+          modelList.append(modelList_per_permutation)
+          loss.append(loss_per_permutation)
+          val_loss.append(val_loss_per_permutation)
+          RMSE.append(RMSE_per_permutation)
+      return modelList, loss, val_loss, RMSE
+
+
+def config_randomSearch(n_of_configs):
+    num_of_layers = np.random.randint(5, 10)
+
+    configs=[]
+
+    for i in range(n_of_configs):
+        num_of_layers = np.random.randint(5, 10)
+        config = np.random.randint(5, 15,size=(num_of_layers))
+        configs.append(list(config))
+    return configs
+
+
+datasets = [2,3]
+n_of_configs = 3
+configs = config_randomSearch(n_of_configs)
+model_across_datasets2 = Model()
+model_across_datasets2.num_iterations = 4
+model_across_datasets2.activationFinction = 'sigmoid'
+model_across_datasets2.configs=configs
+modelList2, loss2, val_loss2, RMSE2 = model_across_datasets2.Model_Across_DataSets(datasets)
