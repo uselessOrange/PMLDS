@@ -1,9 +1,10 @@
 import numpy as np
-loss = {}
+import matplotlib.pyplot as plt
 
-datastruct = {'id1':[1,2],'id2':[3,4,5]}
 
-size = np.random.randint(5, 15)
-loss = np.random.normal(1, 2, size=size)
-datastruct = {'id1':list(loss),'id2':[3,4,5]}
-print(datastruct)
+
+flaotx = 553
+
+intx = int(np.round(flaotx * 0.1))
+
+print(intx)

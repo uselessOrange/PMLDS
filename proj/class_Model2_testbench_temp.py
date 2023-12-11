@@ -3,7 +3,6 @@ import numpy as np
 
 import numpy as np
 import matplotlib.pyplot as plt
-from math import ceil
 
 class Model:
     def __init__(self):
@@ -103,7 +102,7 @@ def config_randomSearch(n_of_configs):
 
 
 
-
+"""
 
 datasets = [2,3,5,7]
 n_of_configs = 9
@@ -126,7 +125,7 @@ print(val_loss[0])
 print(val_loss[0][0])
 print(val_loss[0][0][0])
 print(val_loss[0][0][0][0])
-
+"""
 """
 # Plotting Loss and Validation Loss
 fig, axs = plt.subplots(len(datasets), len(modelList[0]), figsize=(15, 10), sharey=True)
@@ -171,7 +170,7 @@ def lossPlot(datasets,modelList,loss,val_loss):
         plt.tight_layout()
         plt.show()
 
-lossPlot(datasets,modelList,loss,val_loss)
+#lossPlot(datasets,modelList,loss,val_loss)
 def boxPlot(datasets,modelList,RMSE):
     # Plotting RMSE as Box Plots
     fig, axs = plt.subplots(len(datasets), 1, figsize=(10, 10),sharey=False)
@@ -195,7 +194,7 @@ def boxPlot(datasets,modelList,RMSE):
     plt.tight_layout()
     plt.show()
     return RMSE_RAW,RMSE_mean
-boxPlot(datasets,modelList,RMSE)
+#boxPlot(datasets,modelList,RMSE)
 
 
 def plot_Configs(configs):
@@ -212,4 +211,4 @@ def plot_Configs(configs):
     plt.tight_layout()
     plt.show()
 
-plot_Configs(configs)
+#plot_Configs(configs)
